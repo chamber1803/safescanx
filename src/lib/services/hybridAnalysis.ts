@@ -12,39 +12,24 @@ interface HybridAnalysisResult {
 }
 
 export async function submitToHybridAnalysis(file: File): Promise<HybridAnalysisResult> {
-  const API_KEY = import.meta.env.VITE_HYBRID_ANALYSIS_API_KEY;
-  const BASE_URL = 'https://www.hybrid-analysis.com/api/v2';
-
-  if (!API_KEY) {
-    console.error('Hybrid Analysis API key not found in environment variables');
-    return {
-      success: false,
-      malicious: false,
-      details: {
-        verdict: 'error',
-        threatScore: 0,
-        suspiciousProcesses: [],
-        networkConnections: [],
-        fileOperations: [],
-        registryOperations: []
-      }
-    };
+  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+  
+  if (!supabaseUrl) {
+    throw new Error('Supabase URL not configured');
   }
 
   try {
     console.log('Submitting to Hybrid Analysis:', file.name);
 
-    const headers = {
-      'api-key': API_KEY,
-      'User-Agent': 'Hybrid-Analysis-JavaScript/1.0',
-      'accept': 'application/json'
-    };
-
-    // Verify API access
-    const infoResponse = await fetch(`${BASE_URL}/key/current`, {
-      headers,
-      method: 'GET'
-    });
+    // Verify API access through our proxy
+    const infoResponse = await fetch(
+      `${supabaseUrl}/functions/v1/hybrid-analysis?endpoint=key/current`,
+      {
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        }
+      }
+    );
 
     if (!infoResponse.ok) {
       throw new Error(`API key validation failed: ${infoResponse.status}`);
@@ -53,16 +38,21 @@ export async function submitToHybridAnalysis(file: File): Promise<HybridAnalysis
     // Submit file for analysis
     const formData = new FormData();
     formData.append('file', file);
-    formData.append('environment_id', '120'); // Windows 10 64-bit
+    formData.append('environment_id', '120');
     formData.append('no_share_third_party', 'true');
     formData.append('no_share_vt', 'true');
     formData.append('allow_community_access', 'false');
 
-    const submitResponse = await fetch(`${BASE_URL}/submit/file`, {
-      method: 'POST',
-      headers,
-      body: formData
-    });
+    const submitResponse = await fetch(
+      `${supabaseUrl}/functions/v1/hybrid-analysis?endpoint=submit/file`,
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+        },
+        body: formData
+      }
+    );
 
     if (!submitResponse.ok) {
       throw new Error(`File submission failed: ${submitResponse.status}`);
@@ -76,15 +66,19 @@ export async function submitToHybridAnalysis(file: File): Promise<HybridAnalysis
     // Poll for results
     let attempts = 0;
     const maxAttempts = 30;
-    const pollingInterval = 10000; // 10 seconds
+    const pollingInterval = 10000;
 
     while (attempts < maxAttempts) {
       console.log(`Polling for results (attempt ${attempts + 1}/${maxAttempts})...`);
       await new Promise(resolve => setTimeout(resolve, pollingInterval));
 
       const resultResponse = await fetch(
-        `${BASE_URL}/report/${submitData.sha256}/summary`,
-        { headers }
+        `${supabaseUrl}/functions/v1/hybrid-analysis?endpoint=report/${submitData.sha256}/summary`,
+        {
+          headers: {
+            'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
+          }
+        }
       );
 
       if (!resultResponse.ok) {
