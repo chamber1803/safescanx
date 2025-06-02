@@ -23,7 +23,7 @@ export async function submitToHybridAnalysis(file: File): Promise<HybridAnalysis
 
     // Verify API access through our proxy
     const infoResponse = await fetch(
-      `${supabaseUrl}/functions/v1/hybrid-analysis?endpoint=key/current`,
+      `${supabaseUrl}/functions/v1/malware-check?service=hybrid-analysis&endpoint=key/current`,
       {
         headers: {
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
@@ -44,7 +44,7 @@ export async function submitToHybridAnalysis(file: File): Promise<HybridAnalysis
     formData.append('allow_community_access', 'false');
 
     const submitResponse = await fetch(
-      `${supabaseUrl}/functions/v1/hybrid-analysis?endpoint=submit/file`,
+      `${supabaseUrl}/functions/v1/malware-check?service=hybrid-analysis&endpoint=submit/file`,
       {
         method: 'POST',
         headers: {
@@ -73,7 +73,7 @@ export async function submitToHybridAnalysis(file: File): Promise<HybridAnalysis
       await new Promise(resolve => setTimeout(resolve, pollingInterval));
 
       const resultResponse = await fetch(
-        `${supabaseUrl}/functions/v1/hybrid-analysis?endpoint=report/${submitData.sha256}/summary`,
+        `${supabaseUrl}/functions/v1/malware-check?service=hybrid-analysis&endpoint=report/${submitData.sha256}/summary`,
         {
           headers: {
             'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`
