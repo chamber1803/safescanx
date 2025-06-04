@@ -38,3 +38,76 @@ export async function performHeuristicAnalysis(file: File): Promise<number> {
 
   return Math.min(score, 10);
 }
+
+interface BehavioralAnalysisResult {
+  isMatch: boolean;
+  malicious: boolean;
+  details?: {
+    suspiciousProcesses: string[];
+    networkConnections: string[];
+    fileOperations: string[];
+    registryOperations: string[];
+  };
+}
+
+export async function performBehavioralAnalysis(file: File): Promise<BehavioralAnalysisResult> {
+  // Simulated behavioral analysis
+  const suspiciousPatterns = {
+    processes: ['cmd.exe', 'powershell.exe', 'reg.exe', 'rundll32.exe'],
+    network: ['unknown.com', 'malicious.net', 'suspicious.org'],
+    files: ['system32', 'windows\\temp', 'appdata\\local'],
+    registry: ['HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run']
+  };
+
+  // Read file content
+  const content = await file.text();
+  
+  // Initialize detection arrays
+  const detectedProcesses: string[] = [];
+  const detectedNetwork: string[] = [];
+  const detectedFiles: string[] = [];
+  const detectedRegistry: string[] = [];
+
+  // Check for suspicious patterns
+  suspiciousPatterns.processes.forEach(process => {
+    if (content.toLowerCase().includes(process.toLowerCase())) {
+      detectedProcesses.push(process);
+    }
+  });
+
+  suspiciousPatterns.network.forEach(domain => {
+    if (content.toLowerCase().includes(domain.toLowerCase())) {
+      detectedNetwork.push(domain);
+    }
+  });
+
+  suspiciousPatterns.files.forEach(path => {
+    if (content.toLowerCase().includes(path.toLowerCase())) {
+      detectedFiles.push(path);
+    }
+  });
+
+  suspiciousPatterns.registry.forEach(key => {
+    if (content.toLowerCase().includes(key.toLowerCase())) {
+      detectedRegistry.push(key);
+    }
+  });
+
+  // Determine if file is potentially malicious
+  const isMalicious = 
+    detectedProcesses.length > 0 ||
+    detectedNetwork.length > 0 ||
+    detectedFiles.length > 0 ||
+    detectedRegistry.length > 0;
+
+  return {
+    isMatch: true,
+    malicious: isMalicious,
+    details: {
+      suspiciousProcesses: detectedProcesses,
+      networkConnections: detectedNetwork,
+      fileOperations: detectedFiles,
+      registryOperations: detectedRegistry
+    }
+  };
+}

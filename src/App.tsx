@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Shield } from 'lucide-react';
 import { FileUpload } from './components/FileUpload';
 import { ScanResults } from './components/ScanResults';
-import { generateFileHash, performHeuristicAnalysis } from './lib/scanners';
+import { generateFileHash, performHeuristicAnalysis, performBehavioralAnalysis } from './lib/scanners';
 
 export default function App() {
   const [scanning, setScanning] = useState(false);
@@ -11,14 +11,18 @@ export default function App() {
   const handleFileSelect = async (file: File) => {
     setScanning(true);
     try {
-      const fileHash = await generateFileHash(file);
-      const heuristicScore = await performHeuristicAnalysis(file);
+      const [fileHash, heuristicScore, behavioralAnalysis] = await Promise.all([
+        generateFileHash(file),
+        performHeuristicAnalysis(file),
+        performBehavioralAnalysis(file)
+      ]);
 
       setResults({
         fileHash,
         heuristicScore,
         fileName: file.name,
-        fileSize: file.size
+        fileSize: file.size,
+        behavioralAnalysis
       });
     } catch (error) {
       console.error('Scan failed:', error);
