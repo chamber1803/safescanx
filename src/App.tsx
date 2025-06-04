@@ -2,15 +2,7 @@ import React, { useState } from 'react';
 import { Shield } from 'lucide-react';
 import { FileUpload } from './components/FileUpload';
 import { ScanResults } from './components/ScanResults';
-import { supabase } from './lib/supabase';
-import { uploadFile } from './lib/storage';
-import { checkFileHash } from './lib/hashCheck';
-import {
-  generateFileHash,
-  performHeuristicAnalysis,
-  performStaticAnalysis,
-  performBehavioralAnalysis
-} from './lib/scanners';
+import { generateFileHash, performHeuristicAnalysis } from './lib/scanners';
 
 export default function App() {
   const [scanning, setScanning] = useState(false);
@@ -20,44 +12,13 @@ export default function App() {
     setScanning(true);
     try {
       const fileHash = await generateFileHash(file);
-      
-      const [
-        hashResult,
-        heuristicScore,
-        staticResult,
-        behavioralResult
-      ] = await Promise.all([
-        checkFileHash(fileHash),
-        performHeuristicAnalysis(file),
-        performStaticAnalysis(file),
-        performBehavioralAnalysis(file)
-      ]);
-
-      const uploadData = await uploadFile(file, fileHash);
-
-      const { error: dbError } = await supabase
-        .from('scan_results')
-        .insert({
-          file_hash: fileHash,
-          file_name: file.name,
-          file_size: file.size,
-          file_path: uploadData?.path,
-          heuristic_score: heuristicScore,
-          static_analysis: staticResult,
-          behavioral_analysis: behavioralResult,
-          ip_address: await fetch('https://api.ipify.org?format=json')
-            .then(res => res.json())
-            .then(data => data.ip)
-            .catch(() => 'unknown')
-        });
-
-      if (dbError) throw dbError;
+      const heuristicScore = await performHeuristicAnalysis(file);
 
       setResults({
-        hashResult,
+        fileHash,
         heuristicScore,
-        staticAnalysis: staticResult,
-        behavioralAnalysis: behavioralResult
+        fileName: file.name,
+        fileSize: file.size
       });
     } catch (error) {
       console.error('Scan failed:', error);
@@ -77,7 +38,7 @@ export default function App() {
             SafeScanX
           </h1>
           <p className="text-lg text-gray-600">
-            Advanced Malware Detection System
+            File Analysis System
           </p>
         </div>
 
@@ -88,7 +49,7 @@ export default function App() {
         {scanning && (
           <div className="text-center py-12">
             <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Scanning file...</p>
+            <p className="mt-4 text-gray-600">Analyzing file...</p>
           </div>
         )}
 
@@ -99,7 +60,7 @@ export default function App() {
       
       <footer className="bg-gray-800 text-white py-4 text-center">
         <p className="text-sm">
-          © {new Date().getFullYear()} SafeScanX. All rights reserved. Advanced Malware Detection System.
+          © {new Date().getFullYear()} SafeScanX. All rights reserved.
         </p>
       </footer>
     </div>
